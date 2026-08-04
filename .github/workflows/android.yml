@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-edge: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: set up JDK 17
@@ -29,4 +29,3 @@ jobs:
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
-
