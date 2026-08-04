@@ -1,0 +1,2 @@
+rootProject.name = "AOSP Dict Editor"
+include ':app'
