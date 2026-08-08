@@ -7,6 +7,9 @@ import java.nio.ByteOrder
 
 /** Reads Combined text dictionaries and AOSP binary dictionaries. */
 class BinaryDictParser {
+    var lastError: String? = null
+        private set
+
     companion object {
         private const val MAGIC_V2 = 0x9BC13AFE.toInt()
         private const val MAGIC_V4 = 0x78B13458.toInt()
@@ -21,6 +24,7 @@ class BinaryDictParser {
     }
 
     fun parse(file: File): List<Word> {
+        lastError = null
         val bytes = file.readBytes()
         if (bytes.size < 4) return parseFlat(bytes)
 
@@ -40,7 +44,10 @@ class BinaryDictParser {
                 .filter { isValidWord(it.text) }
                 .distinctBy { it.text.lowercase() }
                 .toList()
-        } catch (error: Exception) {
+        } catch (error: Throwable) {
+            // The bundled off-device decoder may require a native library that
+            // is not available on every Android device. Never let that crash the app.
+            lastError = error.message ?: error.javaClass.simpleName
             // Never fall back to scanning arbitrary binary bytes as text.
             // Returning an empty list is safer than showing fabricated words.
             emptyList()

@@ -71,21 +71,43 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadDictionary(uri: Uri) {
-        try {
-            val inputStream = contentResolver.openInputStream(uri)
-            val file = File(cacheDir, "temp.dict")
-            val outputStream = FileOutputStream(file)
-            inputStream?.copyTo(outputStream)
-            
-            val parsedWords = parser.parse(file)
-            words.clear()
-            words.addAll(parsedWords)
-            adapter.notifyDataSetChanged()
-            
-            Toast.makeText(this, "${words.size} kelime yüklendi", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Hata: ${e.message}", Toast.LENGTH_LONG).show()
-        }
+        Thread {
+            try {
+                val file = File(cacheDir, "temp.dict")
+                contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(file).use { output -> input.copyTo(output) }
+                } ?: throw IllegalArgumentException("Dosya açılamadı")
+
+                val parsedWords = parser.parse(file)
+                val parserError = parser.lastError
+                runOnUiThread {
+                    if (parserError != null) {
+                        Toast.makeText(
+                            this,
+                            "Sözlük çözümlenemedi: $parserError",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@runOnUiThread
+                    }
+                    words.clear()
+                    words.addAll(parsedWords)
+                    adapter.notifyDataSetChanged()
+                    Toast.makeText(
+                        this,
+                        "${words.size} kelime yüklendi",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (error: Throwable) {
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        "Dosya yükleme hatası: ${error.message ?: error.javaClass.simpleName}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }.start()
     }
 
     private fun saveDictionary() {
